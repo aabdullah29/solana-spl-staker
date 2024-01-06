@@ -41,6 +41,88 @@ import {
 } from "../splHelper/consts";
 require("dotenv").config();
 
+/*
+--------------
+main function
+--------------
+*/
+(async () => {
+  const secretKey: any = process.env.USER_WALLET;
+  const userWallet = Keypair.fromSecretKey(bs58.decode(secretKey));
+  console.log("userWallet address: ", userWallet.publicKey.toString());
+
+  const network = getNetworkConfig(networkName);
+  const connection = new Connection(network.cluster);
+  const metaplex = getMetaplexInstance(network, connection, userWallet);
+
+  // token ofchain metadata
+  const tokenMetadata: UploadMetadataInput = {
+    name: name, // token name
+    symbol: symbol, // token symbol
+    // image uri
+    image: image,
+  };
+
+  // upload metadata
+  let metadataUri = await uploadMetadata(metaplex, tokenMetadata);
+
+  // convert metadata in V2
+  const tokenMetadataV2 = {
+    name: tokenMetadata.name,
+    symbol: tokenMetadata.symbol,
+    uri: metadataUri, // uploaded metadata uri
+    sellerFeeBasisPoints: royalty, 
+    creators: [
+      { address: userWallet.publicKey, share: 100, verified:true },
+    ],
+    authority: userWallet,
+    isMutable: isMutable,
+    collection: null,
+    uses: null,
+  } as DataV2;
+
+  // new solana address for token
+  let mintKeypair = Keypair.generate();
+  console.log(`token Address: ${mintKeypair.publicKey.toString()}`);
+  // save info file
+  await setMintAddress(mintKeypair.publicKey.toString());
+  await setMintKeypair(mintKeypair.secretKey.toString());
+
+  const mintTransaction: VersionedTransaction =
+    await createMintTokenTransaction(
+      connection,
+      metaplex,
+      userWallet,
+      mintKeypair,
+      decimals,
+      totalSupply,
+      tokenMetadataV2,
+      userWallet.publicKey,
+      userWallet.publicKey, // mintAuthority
+      null, // freezeAuthority
+    );
+
+  // get chain block data
+  let { lastValidBlockHeight, blockhash } = await connection.getLatestBlockhash(
+    "finalized"
+  );
+  const transactionId = await connection.sendTransaction(mintTransaction);
+  await connection.confirmTransaction({
+    signature: transactionId,
+    lastValidBlockHeight,
+    blockhash,
+  });
+
+  console.log(`transaction Hash`, transactionId);
+})();
+
+
+
+/*
+-----------------------------------------
+create transaction for mint new spl token
+-----------------------------------------
+*/
 // mint token instuction function
 const createMintTokenTransaction = async (
   connection: Connection,
@@ -114,6 +196,7 @@ const createMintTokenTransaction = async (
       }
     )
   );
+
   // get last block and initiate transaction
   const latestBlockhash = await connection.getLatestBlockhash();
   const messageV0 = new TransactionMessage({
@@ -121,83 +204,7 @@ const createMintTokenTransaction = async (
     recentBlockhash: latestBlockhash.blockhash,
     instructions: txInstructions,
   }).compileToV0Message();
-  console.log("   ✅ - Compiled Transaction Message");
   const transaction = new VersionedTransaction(messageV0);
   transaction.sign([payer, mintKeypair]);
   return transaction;
 };
-
-/* 
- main function
-*/
-const main = async () => {
-  const secretKey: any = process.env.USER_WALLET;
-  const userWallet = Keypair.fromSecretKey(bs58.decode(secretKey));
-  console.log("userWallet address: ", userWallet.publicKey.toString());
-
-  const network = getNetworkConfig(networkName);
-  const connection = new Connection(network.cluster);
-  const metaplex = getMetaplexInstance(network, connection, userWallet);
-
-  // token ofchain metadata
-  const tokenMetadata: UploadMetadataInput = {
-    name: name, // token name
-    symbol: symbol, // token symbol
-    // image uri
-    image: image,
-  };
-
-  // upload metadata
-  let metadataUri = await uploadMetadata(metaplex, tokenMetadata);
-
-  // convert metadata in V2
-  const tokenMetadataV2 = {
-    name: tokenMetadata.name,
-    symbol: tokenMetadata.symbol,
-    uri: metadataUri, // uploaded metadata uri
-    sellerFeeBasisPoints: royalty, 
-    creators: [
-      { address: userWallet.publicKey, share: 100, verified:true },
-    ],
-    authority: userWallet,
-    isMutable: isMutable,
-    collection: null,
-    uses: null,
-  } as DataV2;
-
-  // new solana address for token
-  let mintKeypair = Keypair.generate();
-  console.log(`token Address: ${mintKeypair.publicKey.toString()}`);
-  // save info file
-  await setMintAddress(mintKeypair.publicKey.toString());
-  await setMintKeypair(mintKeypair.secretKey.toString());
-
-  const mintTransaction: VersionedTransaction =
-    await createMintTokenTransaction(
-      connection,
-      metaplex,
-      userWallet,
-      mintKeypair,
-      decimals,
-      totalSupply,
-      tokenMetadataV2,
-      userWallet.publicKey,
-      userWallet.publicKey, // mintAuthority
-      null, // freezeAuthority
-    );
-
-  // get chain block data
-  let { lastValidBlockHeight, blockhash } = await connection.getLatestBlockhash(
-    "finalized"
-  );
-  const transactionId = await connection.sendTransaction(mintTransaction);
-  await connection.confirmTransaction({
-    signature: transactionId,
-    lastValidBlockHeight,
-    blockhash,
-  });
-
-  console.log(`transaction Hash`, transactionId);
-};
-
-main();

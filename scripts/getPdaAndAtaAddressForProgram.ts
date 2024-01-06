@@ -44,23 +44,56 @@ import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pub
   const secretKey: any = process.env.USER_WALLET;
   const userWallet = Keypair.fromSecretKey(bs58.decode(secretKey));
 
-  const userATAForReward = await getOrCreateAssociatedTokenAccount(
+  const rewardAtaForUser = await getOrCreateAssociatedTokenAccount(
     connection,
     userWallet,
     rewardMintAddress,
     userWallet.publicKey,
     false
   );
-  console.log("userATAForReward: ", userATAForReward.address.toString());
+  console.log("rewardAtaForUser: ", rewardAtaForUser.address.toString());
 
-  const userATAForMyspl = await getOrCreateAssociatedTokenAccount(
+  const mysplAtaForUser = await getOrCreateAssociatedTokenAccount(
     connection,
     userWallet,
     mySplMintAddress,
     userWallet.publicKey,
     false
   );
-  console.log("userATAForMyspl: ", userATAForMyspl.address.toString());
+  console.log("mysplAtaForUser: ", mysplAtaForUser.address.toString());
+
+
+
+  console.log(`\n\n
+  createMySplATA -->
+  programMySplATA: ${splTokenStakeProgramPDA.toString()}
+  mySplMint: ${mySplMintAddress.toString()}
+  payer: currentWallet
+  `)
+
+  console.log(`\n
+  stake --> (${rewardMintAuthorityPDABump}, ${splTokenStakeProgramPDABump}, ${55000000})
+  tokenProgram: TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
+  rewardAtaForUser: ${rewardAtaForUser.address.toString()}
+  authorityOfRewardMint: ${rewardMintAuthorityPDA.toString()}
+  rewardMint: ${rewardMintAddress.toString()}, 
+  mysplAtaForUser:  ${mysplAtaForUser.address.toString()}
+  authorityOfmysplAtaForUser: currentWallet
+  mysplAtaForProgram: ${splTokenStakeProgramPDA.toString()}
+  mysplMint: ${mySplMintAddress.toString()}
+  `)
+
+
+  console.log(`\n
+  unstake --> (${splTokenStakeProgramPDABump}, ${55000000})
+  tokenProgram: TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
+  rewardAtaForUser: ${rewardAtaForUser.address.toString()}
+  authorityOfRewardAtaForUser: currentWallet
+  rewardMint: ${rewardMintAddress.toString()}, 
+  mysplAtaForUser:  ${mysplAtaForUser.address.toString()}
+  mysplAtaForProgram: ${splTokenStakeProgramPDA.toString()}
+  mysplMint: ${mySplMintAddress.toString()}
+  `)
 })();
 
 // createMySplATA
@@ -72,8 +105,16 @@ import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pub
 // rewardAtaForUser: userATAForReward,                      // 8DWGTTGU4FnjvLJj9ZYZbVJmwRFVTb9ou6a2E9QNKpuA
 // authorityOfRewardMint: rewardMintAuthorityPDA,           // 9JRmy6xqKFohtP5YPfdw5DEZCFPXwHBGrdpqsgwTdzxW
 // rewardMint: rewardMintAddress,                           // 5yCiYccC6xiv7s4yPHo4ESgHjBsXh1ySuwZr9Z1oL5v7
-
 // mysplAtaForuser: user.beefTokenBag,                     //  8YxrXzSfYdob1g1P2CPVFw5Epw5JEfQwVocH56htkzNw
-// authorityOfmysplAtaForuser: user.wallet.publicKey,      //  2vLR1s4cmXkYLutA8Xex7Mj1KmuxHw2ahL6GPXrJyEZN
+// authorityOfmysplAtaForUser: user.wallet.publicKey,      //  2vLR1s4cmXkYLutA8Xex7Mj1KmuxHw2ahL6GPXrJyEZN
 // mysplAtaForProgram: splTokenStakeProgramPDA,            //  BwiTCEp1w4WjvNJ5gXYki3tpwtHpBXbBw9Ea8JFkK5xa
 // mysplMint: mySplMintAddress,                            //  6oban7Xk5hk58NngWWyajhM9pQZej2akxUBSkAKwGJPF
+
+
+// unstake      (splTokenStakeProgramPDABump: u8, 55000000)
+// rewardAtaForUser: 
+// authorityOfRewardAtaForUser: currentWallet
+// rewardMint: 
+// mysplAtaForProgram: 
+// mysplAtaForUser: 
+// mysplAtaForUser: 
