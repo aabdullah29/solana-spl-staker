@@ -1,12 +1,13 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
 
-declare_id!("CDtkAZN1PyZSDr8mteexTHivFXSQfy1faqXmagwgG1Z4");
+declare_id!("E1XZtRdN7pSmzTr4f26WLATW2ifneyuWShZ9ZLV7d6Me");
 
 #[program]
 pub mod staker {
-    pub const REWARD_MINT_ADDRESS: &str = "AXQgYYmLHasZoMukQ8jwmE2md9BYUUQgqv5VHvi6CH4p";
-    pub const MYSPL_MINT_ADDRESS: &str = "Cir79rCNYx21nEhyPspnttAfmU6HQt5Es1by38JDhqnu";
+    //stake //beef
+    pub const REWARD_MINT_ADDRESS: &str = "5yCiYccC6xiv7s4yPHo4ESgHjBsXh1ySuwZr9Z1oL5v7";
+    pub const MYSPL_MINT_ADDRESS: &str = "6oban7Xk5hk58NngWWyajhM9pQZej2akxUBSkAKwGJPF";
     use super::*;
     pub fn create_myspl_ata(ctx: Context<CreateMysplATA>) -> Result<()> {
         Ok(())
@@ -14,8 +15,8 @@ pub mod staker {
 
     pub fn stake(
         ctx: Context<Stake>,
-        reward_mint_authority_bump: u8,
-        // program_myspl_ata_bump: u8,
+        authority_of_reward_mint_bump: u8,
+        myspl_ata_for_program_bump: u8,
         myspl_amount: u64,
     ) -> Result<()> {
         // ************************************************************
@@ -26,14 +27,17 @@ pub mod staker {
         // and get signer
         let reward_amount = myspl_amount; // TODO: Change the formula
         let reward_mint_address = ctx.accounts.reward_mint.key();
-        let seeds = &[reward_mint_address.as_ref(), &[reward_mint_authority_bump]];
+        let seeds = &[
+            reward_mint_address.as_ref(),
+            &[authority_of_reward_mint_bump],
+        ];
         let signer = [&seeds[..]];
         let cpi_ctx = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
             token::MintTo {
                 mint: ctx.accounts.reward_mint.to_account_info(),
-                to: ctx.accounts.user_reward_ata.to_account_info(),
-                authority: ctx.accounts.reward_mint_authority.to_account_info(),
+                to: ctx.accounts.reward_ata_for_user.to_account_info(),
+                authority: ctx.accounts.authority_of_reward_mint.to_account_info(),
             },
             &signer,
         );
@@ -45,11 +49,11 @@ pub mod staker {
         let cpi_ctx = CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
             token::Transfer {
-                from: ctx.accounts.user_myspl_ata.to_account_info(),
-                to: ctx.accounts.program_myspl_ata.to_account_info(),
+                from: ctx.accounts.myspl_ata_for_user.to_account_info(),
+                to: ctx.accounts.myspl_ata_for_program.to_account_info(),
                 authority: ctx
                     .accounts
-                    .user_myspl_ata_authority
+                    .authority_of_myspl_ata_for_user
                     .to_account_info(),
             },
         );
@@ -60,7 +64,7 @@ pub mod staker {
 
     pub fn unstake(
         ctx: Context<UnStake>,
-        program_myspl_ata_bump: u8,
+        myspl_ata_for_program_bump: u8,
         reward_amount: u64,
     ) -> Result<()> {
         // ************************************************************
@@ -70,10 +74,10 @@ pub mod staker {
             ctx.accounts.token_program.to_account_info(),
             token::Burn {
                 mint: ctx.accounts.reward_mint.to_account_info(),
-                from: ctx.accounts.user_reward_ata.to_account_info(),
+                from: ctx.accounts.reward_ata_for_user.to_account_info(),
                 authority: ctx
                     .accounts
-                    .user_reward_ata_authority
+                    .authority_of_reward_ata_for_user
                     .to_account_info(),
             },
         );
@@ -83,14 +87,14 @@ pub mod staker {
         // 2. Ask SPL Token Program to transfer back MYSPL to the user.
         // ************************************************************
         let myspl_mint_address = ctx.accounts.myspl_mint.key();
-        let seeds = &[myspl_mint_address.as_ref(), &[program_myspl_ata_bump]];
+        let seeds = &[myspl_mint_address.as_ref(), &[myspl_ata_for_program_bump]];
         let signer = [&seeds[..]];
         let cpi_ctx = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
             token::Transfer {
-                from: ctx.accounts.program_myspl_ata.to_account_info(),
-                authority: ctx.accounts.program_myspl_ata.to_account_info(),
-                to: ctx.accounts.user_myspl_ata.to_account_info(),
+                from: ctx.accounts.myspl_ata_for_program.to_account_info(),
+                authority: ctx.accounts.myspl_ata_for_program.to_account_info(),
+                to: ctx.accounts.myspl_ata_for_user.to_account_info(),
             },
             &signer,
         );
@@ -105,7 +109,7 @@ pub mod staker {
 #[derive(Accounts)]
 pub struct CreateMysplATA<'info> {
     // 1. PDA (pubkey) for myspl ATA for our program.
-    // seeds: We use the token mint as a seed for the mapping -> think "HashMap[seeds+bump] = pda"
+    // seeds: [myspl_mint + current program id] => "HashMap[seeds+bump] = pda"
     // token::mint: Token Program wants to know what kind of token this ATA is for
     // token::authority: It's a PDA so the authority is itself!
     #[account(
@@ -114,9 +118,9 @@ pub struct CreateMysplATA<'info> {
         seeds = [ MYSPL_MINT_ADDRESS.parse::<Pubkey>().unwrap().as_ref() ],
         bump,
         token::mint = myspl_mint,
-        token::authority = program_myspl_ata,
+        token::authority = myspl_ata_for_program,
     )]
-    pub program_myspl_ata: Account<'info, TokenAccount>,
+    pub myspl_ata_for_program: Account<'info, TokenAccount>,
 
     // 2. The MYSPL token address used as token::mint = [...]
     #[account(
@@ -135,7 +139,7 @@ pub struct CreateMysplATA<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(reward_mint_authority_bump: u8, program_myspl_ata_bump: u8)]
+#[instruction(authority_of_reward_mint_bump: u8, myspl_ata_for_program_bump: u8)]
 pub struct Stake<'info> {
     // SPL Token Program
     pub token_program: Program<'info, Token>,
@@ -144,6 +148,17 @@ pub struct Stake<'info> {
     // MINTING REWARD TO USERS
     // ***********
 
+    // User ATAt for receive REWARD
+    #[account(mut)]
+    pub reward_ata_for_user: Account<'info, TokenAccount>,
+
+    /// CHECK: only used as a signing PDA for mutate the above
+    #[account(
+    seeds = [ reward_mint.key().as_ref() ],
+    bump = authority_of_reward_mint_bump,
+    )]
+    pub authority_of_reward_mint: UncheckedAccount<'info>,
+
     // Address of the REWARD mint allowed as mutate for mint new for user
     #[account(
     mut,
@@ -151,35 +166,24 @@ pub struct Stake<'info> {
     )]
     pub reward_mint: Account<'info, Mint>,
 
-    /// CHECK: only used as a signing PDA for mutate the above
-    #[account(
-    seeds = [ reward_mint.key().as_ref() ],
-    bump = reward_mint_authority_bump,
-    )]
-    pub reward_mint_authority: UncheckedAccount<'info>,
-
-    // User ATAt for receive REWARD
-    #[account(mut)]
-    pub user_reward_ata: Account<'info, TokenAccount>,
-
     // ***********
     // TRANSFERING MYSPL FROM USERS
     // ***********
 
     // User ATA which holds MYSPL.
     #[account(mut)]
-    pub user_myspl_ata: Account<'info, TokenAccount>,
+    pub myspl_ata_for_user: Account<'info, TokenAccount>,
 
     // User ATA authority allowed for mutate the above
-    pub user_myspl_ata_authority: Signer<'info>,
+    pub authority_of_myspl_ata_for_user: Signer<'info>,
 
     // Program ATA to receive MYSPL from users
     #[account(
         mut,
         seeds = [ myspl_mint.key().as_ref() ],
-        bump = program_myspl_ata_bump,
+        bump = myspl_ata_for_program_bump,
     )]
-    pub program_myspl_ata: Account<'info, TokenAccount>,
+    pub myspl_ata_for_program: Account<'info, TokenAccount>,
 
     // Require for the PDA above
     #[account(
@@ -189,7 +193,7 @@ pub struct Stake<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(program_myspl_ata_bump: u8)]
+#[instruction(myspl_ata_for_program_bump: u8)]
 pub struct UnStake<'info> {
     // SPL Token Program
     pub token_program: Program<'info, Token>,
@@ -198,19 +202,19 @@ pub struct UnStake<'info> {
     // BURNING USER'S REWARD
     // ***********
 
+    // user ata which hold REWARD use in `token::Burn.to`
+    #[account(mut)]
+    pub reward_ata_for_user: Account<'info, TokenAccount>,
+
+    // The authority allowed for mutate the above
+    pub authority_of_reward_ata_for_user: Signer<'info>,
+
     // REWARD address use in `token::Burn.mint`
     #[account(
         mut,
         address = REWARD_MINT_ADDRESS.parse::<Pubkey>().unwrap(),
     )]
     pub reward_mint: Account<'info, Mint>,
-
-    // user ata which hold REWARD use in `token::Burn.to`
-    #[account(mut)]
-    pub user_reward_ata: Account<'info, TokenAccount>,
-
-    // The authority allowed for mutate the above
-    pub user_reward_ata_authority: Signer<'info>,
 
     // ***********
     // TRANSFER MYSPL TO USERS
@@ -220,13 +224,13 @@ pub struct UnStake<'info> {
     #[account(
         mut,
         seeds = [ myspl_mint.key().as_ref() ],
-        bump = program_myspl_ata_bump,
+        bump = myspl_ata_for_program_bump,
     )]
-    pub program_myspl_ata: Account<'info, TokenAccount>,
+    pub myspl_ata_for_program: Account<'info, TokenAccount>,
 
     // user ATA use for `token::Transfer.to`
     #[account(mut)]
-    pub user_myspl_ata: Account<'info, TokenAccount>,
+    pub myspl_ata_for_user: Account<'info, TokenAccount>,
 
     // Require for the PDA above
     #[account(
