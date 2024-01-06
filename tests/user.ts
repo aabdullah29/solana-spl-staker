@@ -1,5 +1,5 @@
 import {  PublicKey } from '@solana/web3.js';
-import { beefMintAddress, stakeMintAddress, userWallet } from "../scripts/config"
+import { beefMintAddress, stakeMintAddress, userWallet } from "../scripts/programHelper/config"
 import { TokenHelper } from "./token_helper";
 import { Wallet } from "@project-serum/anchor";
 

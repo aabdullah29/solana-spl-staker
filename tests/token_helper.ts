@@ -5,7 +5,7 @@ import {
     getMint,
     getOrCreateAssociatedTokenAccount,
 } from "@solana/spl-token";
-import {connection, randomPayer} from "../scripts/config"
+import {connection, randomPayer} from "../scripts/programHelper/config"
 
 
 class TokenHelper {

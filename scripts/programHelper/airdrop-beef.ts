@@ -1,7 +1,7 @@
 import { mintTo }  from "@solana/spl-token";
 import { beefMintKeypair, connection, randomPayer } from "./config";
-import { TokenHelper } from "../tests/token_helper";
-import { User } from "../tests/user";
+import { TokenHelper } from "../../tests/token_helper";
+import { User } from "../../tests/user";
 
 
 const airdropBeef = async () => {

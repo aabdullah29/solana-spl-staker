@@ -7,10 +7,10 @@ import {
   beefMintAddress,
   program,
   findStakeMintAuthorityPDA
-} from "../scripts/config"
+} from "../scripts/programHelper/config"
 import { User } from "./user";
-import { createMints } from "../scripts/create-mints";
-import { airdropBeef } from "../scripts/airdrop-beef";
+import { createMints } from "../scripts/programHelper/create-mints";
+import { airdropBeef } from "../scripts/programHelper/airdrop-beef";
 import { TokenHelper } from "./token_helper";
 
 
