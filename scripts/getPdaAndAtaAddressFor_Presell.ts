@@ -94,7 +94,7 @@ import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pub
   dataPda: ${dataProgramPDA.toString()}
   icoMint: ${icoMintAddress.toString()}
   icoAtaForAdmin:  ${icoAtaForAdmin.address.toString()}
-  admin: currentWallet
+  admin: ${userWallet.publicKey.toString()}
   `);
 
   console.log(`\n\n
@@ -107,7 +107,7 @@ import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pub
   `);
 
   console.log(`\n\n
-  setData --> dataWithSol, dataWithUsdt
+  setData --> priceWithSol, priceWithUsdt
   dataPda: ${dataProgramPDA.toString()}
   admin: ${userWallet.publicKey.toString()}
   `);
