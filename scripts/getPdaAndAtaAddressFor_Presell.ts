@@ -7,9 +7,13 @@ import { bs58 } from "@project-serum/anchor/dist/cjs/utils/bytes";
 import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pubkey";
 
 (async () => {
-  const usdtMintAddress = toPublicKey("5yCiYccC6xiv7s4yPHo4ESgHjBsXh1ySuwZr9Z1oL5v7"); // stake
-  const icoSplMintAddress = toPublicKey("6oban7Xk5hk58NngWWyajhM9pQZej2akxUBSkAKwGJPF"); // beef
-  const icoProgramAddress = toPublicKey("GqWug5qcoMMXguytUTWAsBAchhQk7byrtpaESaF1wT3Q");
+  // [164,231,158,235,58,33,153,222,31,87,105,142,31,180,86,253,182,5,191,128,11,194,53,112,193,224,229,109,91,97,30,164,235,77,0,0,106,190,148,96,30,34,53,211,63,99,46,167,102,28,35,117,6,252,131,241,142,238,183,60,31,54,41,35]
+  // ico program keypair
+
+  const usdtMintAddress = toPublicKey("7zzcTCAHZizEkLGfJkj148TYfWfaRvs9JQn4gD75Y6gx"); // USDT
+  const icoMintAddress = toPublicKey("FBKhAghAqzttng8UAAf7VuX7msiNAtVxgEsY4PrfZxP4"); // ICO
+  const icoProgramAddress = toPublicKey("XhKfHXqkQF7ALsqyNTDK7EzZdzLidtyEa5S6dp9tXQW");
+  const userPubkey = toPublicKey('C5jtiLaDBDoRL1dkag8gVEQ7xR9GtJ36wdL57xyfHzkF');
 
   const [usdtMintAuthorityPDA, usdtMintAuthorityPDABump] = findProgramAddressSync(
     [usdtMintAddress.toBuffer()],
@@ -22,7 +26,7 @@ import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pub
   );
 
   const [icoTokenStakeProgramPDA, icoTokenStakeProgramPDABump] = findProgramAddressSync(
-    [icoSplMintAddress.toBuffer()],
+    [icoMintAddress.toBuffer()],
     icoProgramAddress
   );
   console.log(
@@ -38,14 +42,14 @@ import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pub
   console.log("wallet: ",userWallet.publicKey.toString());
 
 
-  const [priceProgramPDA, priceProgramPDABump] = findProgramAddressSync(
-    [new Buffer("price"),userWallet.publicKey.toBuffer()],
+  const [dataProgramPDA, dataProgramPDABump] = findProgramAddressSync(
+    [new Buffer("data"),userWallet.publicKey.toBuffer()],
     icoProgramAddress
   );
   console.log(
-    "priceProgramPDA: ",
-    priceProgramPDA.toString(),
-    priceProgramPDABump
+    "dataProgramPDA: ",
+    dataProgramPDA.toString(),
+    dataProgramPDABump
   );
 
 
@@ -56,81 +60,83 @@ import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pub
     userWallet.publicKey,
     false
   );
-  console.log("usdtAtaForAdmin: ", usdtAtaForAdmin.address.toString());
 
-  const icoSplAtaForAdmin = await getOrCreateAssociatedTokenAccount(
+
+  const icoAtaForAdmin = await getOrCreateAssociatedTokenAccount(
     connection,
     userWallet,
-    icoSplMintAddress,
+    icoMintAddress,
     userWallet.publicKey,
     false
   );
-  console.log("icoSplAtaForAdmin: ", icoSplAtaForAdmin.address.toString());
+
+  const usdtAtaForUser = await getOrCreateAssociatedTokenAccount(
+    connection,
+    userWallet,
+    usdtMintAddress,
+    userPubkey,
+    false
+  );
+
+  const icoAtaForUser = await getOrCreateAssociatedTokenAccount(
+    connection,
+    userWallet,
+    icoMintAddress,
+    userPubkey,
+    false
+  );
+
+
 
   console.log(`\n\n
-  createMySplATA -->
-  programMySplATA: ${icoTokenStakeProgramPDA.toString()}
-  icoSplMint: ${icoSplMintAddress.toString()}
-  icoSplAtaForAdmin:  ${icoSplAtaForAdmin.address.toString()}
-  payer: currentWallet
-  `);
-
-  console.log(`\n\n
-  depositIcoSplInATA -->
-  programMySplATA: ${icoTokenStakeProgramPDA.toString()}
-  icoSplMint: ${icoSplMintAddress.toString()}
-  icoSplAtaForAdmin:  ${icoSplAtaForAdmin.address.toString()}
+  createIcoATA --> (9600000000000, 100, 25)
+  icoAtaForProgram: ${icoTokenStakeProgramPDA.toString()}
+  dataPda: ${dataProgramPDA.toString()}
+  icoMint: ${icoMintAddress.toString()}
+  icoAtaForAdmin:  ${icoAtaForAdmin.address.toString()}
   admin: currentWallet
   `);
 
   console.log(`\n\n
-  setPrice --> priceWithSol, priceWithUsdt
-  pricePda: ${priceProgramPDA.toString()}
-  admin: currentWallet
+  depositIcoInATA --> (25000000000000)
+  icoAtaForProgram: ${icoTokenStakeProgramPDA.toString()}
+  dataPda: ${dataProgramPDA.toString()}
+  icoMint: ${icoMintAddress.toString()}
+  icoAtaForAdmin:  ${icoAtaForAdmin.address.toString()}
+  admin: ${userWallet.publicKey.toString()}
+  `);
+
+  console.log(`\n\n
+  setData --> dataWithSol, dataWithUsdt
+  dataPda: ${dataProgramPDA.toString()}
+  admin: ${userWallet.publicKey.toString()}
   `);
 
 
   console.log(`\n
-  buyWithSol --> (${icoTokenStakeProgramPDABump}, ${55000000})
-  user: currentWallet
-  admin: currentWallet
-  icoSplMint: ${icoSplMintAddress.toString()}
-  icoSplAtaForUser:  ${icoSplAtaForAdmin.address.toString()}
-  mysplAtaForProgram: ${icoTokenStakeProgramPDA.toString()}
-  pricePda: ${priceProgramPDA.toString()}
+  buyWithSol --> (${icoTokenStakeProgramPDABump}, ${50})
+  icoAtaForProgram: ${icoTokenStakeProgramPDA.toString()}
+  dataPda: ${dataProgramPDA.toString()}
+  icoMint: ${icoMintAddress.toString()}
+  icoAtaForUser:  ${icoAtaForUser.address.toString()}
+  user: ${userPubkey.toString()}
+  admin: ${userWallet.publicKey.toString()}
   tokenProgram: TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
+  system_program: 11111111111111111111111111111111
   `);
 
   console.log(`\n
-  buyWithUsdt --> (${icoTokenStakeProgramPDABump}, ${55000000})
-  user: currentWallet
-  usdtAtaForUser: ${usdtAtaForAdmin.address.toString()}
+  buyWithUsdt --> (${icoTokenStakeProgramPDABump}, ${100})
+  icoAtaForProgram: ${icoTokenStakeProgramPDA.toString()}
+  dataPda: ${dataProgramPDA.toString()}
+  icoMint: ${icoMintAddress.toString()}
+  icoAtaForUser:  ${icoAtaForAdmin.address.toString()}
+  usdtAtaForUser: ${usdtAtaForUser.address.toString()}
   usdtAtaForAdmin: ${usdtAtaForAdmin.address.toString()}
-  icoSplMint: ${icoSplMintAddress.toString()}
-  icoSplAtaForUser:  ${icoSplAtaForAdmin.address.toString()}
-  mysplAtaForProgram: ${icoTokenStakeProgramPDA.toString()}
-  pricePda: ${priceProgramPDA.toString()}
+  user: ${userPubkey.toString()}
   tokenProgram: TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
   `);
 })();
 
-// createMySplATA
-// programMySplATA: icoTokenStakeProgramPDA,            //  BwiTCEp1w4WjvNJ5gXYki3tpwtHpBXbBw9Ea8JFkK5xa
-// icoSplMint: icoSplMintAddress,                         //  6oban7Xk5hk58NngWWyajhM9pQZej2akxUBSkAKwGJPF
-// payer: userWalletPublicKey,                          //  2vLR1s4cmXkYLutA8Xex7Mj1KmuxHw2ahL6GPXrJyEZN
 
-// stake      (usdtMintAuthorityPDABump, icoTokenStakeProgramPDABump, 1000000000)
-// usdtAtaForAdmin: userATAForReward,                      // 8DWGTTGU4FnjvLJj9ZYZbVJmwRFVTb9ou6a2E9QNKpuA
-// rewardMint: usdtMintAddress,                           // 5yCiYccC6xiv7s4yPHo4ESgHjBsXh1ySuwZr9Z1oL5v7
-// icoSplAtaForAdmin: user.beefTokenBag,                     //  8YxrXzSfYdob1g1P2CPVFw5Epw5JEfQwVocH56htkzNw
-// authorityOficoSplAtaForAdmin: user.wallet.publicKey,      //  2vLR1s4cmXkYLutA8Xex7Mj1KmuxHw2ahL6GPXrJyEZN
-// mysplAtaForProgram: icoTokenStakeProgramPDA,            //  BwiTCEp1w4WjvNJ5gXYki3tpwtHpBXbBw9Ea8JFkK5xa
-// icoSplMint: icoSplMintAddress,                            //  6oban7Xk5hk58NngWWyajhM9pQZej2akxUBSkAKwGJPF
 
-// unstake      (icoTokenStakeProgramPDABump: u8, 55000000)
-// usdtAtaForAdmin:
-// authorityOfusdtAtaForAdmin: currentWallet
-// rewardMint:
-// mysplAtaForProgram:
-// icoSplAtaForAdmin:
-// icoSplAtaForAdmin:

@@ -2,12 +2,12 @@ import { getFileData, writeFileData } from "./helper";
 import { toPublicKey } from "@metaplex-foundation/js";
 require("dotenv").config();
 
-export const decimals = 6;
-export const totalSupply = 96000000000;
-export const name = "REWARD";
-export const symbol = "$RD";
+export const decimals = 8;
+export const totalSupply = 900000000000;
+export const name = "Smart Token";
+export const symbol = "ST";
 export const image =
-  "https://bafkreievpa5j5w7mpbny3gpzvwdckculahwnvzwpnaekns5dvrj7kma5ra.ipfs.nftstorage.link/";
+  "https://images.assetsdelivery.com/compings_v2/ahasoft2000/ahasoft20001802/ahasoft2000180204101.jpg";
 export const royalty = 1000; // 100 = 1%
 export const isMutable = false;
 export const newUpdateAuthority = undefined;
@@ -20,7 +20,7 @@ export const networkName = !!process.env.NETWORK
   : "mainnet";
 
 const mintAddressConfig = {
-  path: `spl/outputs/${name.replace(" ", "_")}.txt`,
+  path: `scripts/spl/outputs/${name.replace(" ", "_")}.txt`,
   key: "MINT_ADDRESS",
 };
 export const getMintAddress = async () => {
@@ -33,7 +33,7 @@ export const setMintAddress = async (data: string) => {
 };
 
 const mintKeypairConfig = {
-  path: `outputs/${name.replace(" ", "_")}.txt`,
+  path: `scripts/spl/outputs/${name.replace(" ", "_")}.txt`,
   key: "MINT_KEYPAIR",
 };
 export const setMintKeypair = async (data: string) => {
